@@ -80,14 +80,24 @@ JOIN sakila.address AS A ON C.address_id = A.address_id
 -- A prolific actor is defined as the actor who has acted in the most number of films. 
 -- First, you will need to find the most prolific actor and then use that actor_id to find the different films that he or she starred in.
     
-SELECT A.first_name, A.last_name, FA.actor_id, COUNT(FA.film_id) AS films_actor
+SELECT f.title FROM film f
+JOIN film_actor fa ON f.film_id = fa.film_id
+WHERE fa.actor_id = (
+					SELECT actor_id 
+					FROM sakila.film_actor 
+					GROUP BY actor_id 
+					ORDER BY COUNT(film_id) DESC limit 1
+                    );
+
+-- Most prolific actor last name in the Sakila database.
+SELECT A.last_name, A.actor_id,  COUNT(FA.film_id) AS films_actor
 FROM sakila.film_actor AS FA
 JOIN sakila.actor AS A
 ON FA.actor_id = A.actor_id
 GROUP BY FA.actor_id 
 ORDER BY films_actor DESC limit 1;
 
--- Just to verify --
+-- -- Most prolific actor counting the number of movies
 SELECT COUNT(film_id) AS films_actor, actor_id 
 FROM sakila.film_actor 
 GROUP BY actor_id 
@@ -118,10 +128,30 @@ ORDER BY total DESC limit 1;
 -- Retrieve the client_id and the total_amount_spent of those clients who spent more than the average of the total_amount spent by each client. 
 -- You can use subqueries to accomplish this.
 
+SELECT customer_id, SUM(amount) AS total_spent 
+FROM payment 
+GROUP BY customer_id 
+HAVING total_spent > (
+	SELECT AVG(total_customer) 
+	FROM (
+		SELECT SUM(amount) AS total_customer 
+		FROM payment 
+		GROUP BY customer_id) AS totals);
+
+-- Separate each SELECT to verify the output
+SELECT SUM(amount) AS total_customer 
+		FROM payment 
+		GROUP BY customer_id;
+
+SELECT AVG(total_customer) 
+	FROM (
+		SELECT SUM(amount) AS total_customer 
+		FROM payment 
+		GROUP BY customer_id) AS totals;
+        
+-- My original query
+        
 SELECT customer_id, sum(amount), ROUND(AVG(amount),2) AS 'Average' FROM sakila.payment
 GROUP BY customer_id
 HAVING Average > (SELECT ROUND(AVG(amount)) AS 'Average1' FROM sakila.payment)
 ORDER BY Average DESC;
-
--- To find the average of the total_amount spent by each client.  
-SELECT ROUND(AVG(amount)) AS 'Average1' FROM sakila.payment;
